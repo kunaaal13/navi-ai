@@ -39,7 +39,21 @@ export default function RootLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="chat" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="chat"
+        options={{
+          headerTitle: 'Navi AI',
+          headerTitleStyle: {
+            fontFamily: 'Geist-Bold',
+            fontSize: 24,
+          },
+          headerStyle: {
+            backgroundColor: '#000',
+          },
+          headerTintColor: '#fff',
+          headerBackTitleVisible: false,
+        }}
+      />
     </Stack>
   );
 }

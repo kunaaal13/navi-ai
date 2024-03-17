@@ -2,63 +2,84 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import { FlatList, SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-interface Message {
-  sender: 'user' | 'AI';
-  text: string;
-}
-
-const initialMessages: Message[] = [
-  {
-    sender: 'AI',
-    text: 'Hello there',
-  },
-  {
-    sender: 'user',
-    text: 'Hello',
-  },
-  {
-    sender: 'AI',
-    text: 'How are you doing today?',
-  },
-];
+import getAIResponse, { Message } from '~/lib/gemini';
 
 function Chat() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
+  const viewRef = useRef<View>(null);
 
-  function sendMessage() {
-    setMessages((prevMessages) => [
-      ...prevMessages,
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  async function sendMessage() {
+    if (input === '') return;
+
+    setMessages((prev) => [
+      ...prev,
       {
-        sender: 'user',
+        role: 'user',
         text: input,
       },
     ]);
 
-    // clear input
     setInput('');
+    scrollToBottom();
 
-    // simulate streaming AI response add words every second to the last message
-    const response = 'Hello AI';
-    const lastMessage = messages[messages.length - 1];
+    // Get a response from the AI
+    try {
+      let response = await getAIResponse(input, messages);
 
-    // Scroll to the bottom
+      // Simulate typing add word by word with a delay of 100ms
+      const words = response.split(' ');
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'model',
+          text: '...',
+        },
+      ]);
+
+      let temp = '';
+
+      for (let i = 0; i < words.length; i++) {
+        setTimeout(() => {
+          temp += words[i] + ' ';
+          // Replace the last message with the new one
+          setMessages((prev) => [
+            ...prev.slice(0, prev.length - 1),
+            {
+              role: 'model',
+              text: temp,
+            },
+          ]);
+          scrollToBottom();
+        }, i * 100);
+      }
+
+      scrollToBottom();
+    } catch (error) {
+      console.error(error);
+      return `Sorry, I'm having trouble understanding you. Could you please rephrase?`;
+    }
+  }
+
+  function scrollToBottom() {
     listRef.current?.scrollToEnd();
   }
+
   return (
     <SafeAreaView className="flex-1 bg-black w-full items-center">
       {/* Chats */}
-      <View className="flex-1 bg-black w-full" style={{ padding: 20 }}>
+      <View ref={viewRef} className="flex-1 bg-black w-full pb-5" style={{ padding: 20 }}>
         <FlatList
           data={messages}
           keyExtractor={(item, index) => index.toString()}
           ref={listRef}
           renderItem={({ item }) => (
             <View
-              className={`${item.sender === 'user' ? 'bg-blue-700' : 'bg-gray-600'} px-3 py-4 rounded-xl mb-5`}
+              className={`${item.role === 'user' ? 'bg-blue-700' : 'bg-gray-600'} px-3 py-4 rounded-xl mb-5`}
               style={{
-                alignSelf: item.sender === 'user' ? 'flex-end' : 'flex-start',
+                alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '75%',
               }}>
               <Text
